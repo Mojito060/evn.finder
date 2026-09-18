@@ -8,6 +8,7 @@ import {
 	TransportType,
 } from '@/external/generated/risBoards';
 import { getAbfahrten } from '@/server/iris';
+import { logger } from '@/server/logger';
 import type { Abfahrt } from '@/types/iris';
 import { differenceInMinutes } from 'date-fns';
 
@@ -78,6 +79,22 @@ export async function getIrisDepartures(
 		lookbehind: 0,
 		startTime: timeStart,
 	});
+
+	logger.info(
+		{
+			evaNumber,
+			lookahead,
+			rawCount: result.departures.length,
+			sample: result.departures.slice(0, 5).map((a) => ({
+				category: a.train.type,
+				line: a.train.line,
+				number: a.train.number,
+				admin: a.train.admin,
+				destination: a.destination || a.scheduledDestination,
+			})),
+		},
+		'IRIS fallback: raw departures',
+	);
 
 	const departures = result.departures
 		.map((a) => mapAbfahrtToStopDeparture(a, evaNumber))
