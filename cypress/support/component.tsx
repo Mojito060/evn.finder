@@ -1,13 +1,9 @@
 import './commands';
-import { Navigation } from '@/client/Common/Components/Navigation';
-import type { CommonConfig } from '@/client/Common/config';
-import { InnerCommonConfigProvider } from '@/client/Common/provider/CommonConfigProvider';
 import { theme } from '@/client/Themes';
 import { type Theme, ThemeProvider } from '@mui/material';
 import { mount } from 'cypress/react';
 import type { ReactElement } from 'react';
 import { HeadProvider } from 'react-head';
-import Cookies from 'universal-cookie';
 import '@percy/cypress';
 import { GlobalCSS } from '@/client/GlobalCSS';
 import { RPCProvider } from '@/router';
@@ -21,7 +17,6 @@ import {
 	createRouter,
 } from '@tanstack/react-router';
 import { de as deLocale } from 'date-fns/locale/de';
-import { CookiesProvider } from 'react-cookie';
 
 const customDeLocaleText: typeof deDE.components.MuiLocalizationProvider.defaultProps.localeText =
 	{
@@ -79,10 +74,8 @@ interface ProviderWithOptions<
 	initialState?: any;
 }
 interface Options {
-	withNavigation?: boolean;
 	provider?: ProviderWithOptions[];
 	context?: ContextWithOptions[];
-	commonConfig?: Partial<CommonConfig>;
 }
 
 declare global {
@@ -122,21 +115,13 @@ Cypress.Commands.add('getTheme', () => cy.window().then(() => theme));
 
 Cypress.Commands.add(
 	'mount',
-	(
-		component: ReactElement,
-		{ withNavigation, context, commonConfig, provider }: Options = {},
-	) => {
-		const cookies = new Cookies();
+	(component: ReactElement, { context, provider }: Options = {}) => {
 		let result = (
 			<>
 				<GlobalCSS />
 				{component}
 			</>
 		);
-
-		if (withNavigation) {
-			result = <Navigation>{result}</Navigation>;
-		}
 
 		if (context) {
 			for (const c of context) {
@@ -150,24 +135,6 @@ Cypress.Commands.add(
 			}
 		}
 
-		const mergedCommonConfig: CommonConfig = {
-			showUIC: false,
-			fahrzeugGruppe: false,
-			autoUpdate: 0,
-			hideTravelynx: false,
-			showCoachType: false,
-			delayTime: false,
-			lineAndNumber: false,
-			showCancelled: true,
-			sortByTime: false,
-			onlyDepartures: false,
-			startTime: undefined,
-			lookahead: '115020',
-			lookbehind: '10',
-			showRl100: false,
-			...commonConfig,
-		};
-
 		const route = createRootRoute({
 			component: () => (
 				<RPCProvider>
@@ -177,11 +144,7 @@ Cypress.Commands.add(
 							adapterLocale={deLocale}
 							localeText={customDeLocaleText}
 						>
-							<InnerCommonConfigProvider initialConfig={mergedCommonConfig}>
-								<HeadProvider>
-									<CookiesProvider cookies={cookies}>{result}</CookiesProvider>
-								</HeadProvider>
-							</InnerCommonConfigProvider>
+							<HeadProvider>{result}</HeadProvider>
 						</LocalizationProvider>
 					</ThemeProvider>
 				</RPCProvider>

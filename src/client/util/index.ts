@@ -1,5 +1,4 @@
 export * from './minMax';
-export * from './configSanitize';
 
 export function uniqBy<T>(array: undefined, identifier: keyof T): undefined;
 export function uniqBy<T>(array: T[], identifier: keyof T): T[];

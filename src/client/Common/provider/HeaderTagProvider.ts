@@ -3,21 +3,15 @@ import { useRouterState } from '@tanstack/react-router';
 import { useCallback, useEffect, useState } from 'react';
 
 const defaultDescription =
-	'Dein Begleiter um Stressfrei Bahn zu fahren. Sucht die besten Informationen aus allen Quellen um dich ans Ziel zu bringen.';
-const defaultTitle = 'Bahn Experte';
+	'Suche EVNs (Europäische Fahrzeugnummern) über Zug- oder Liniensuche und speichere sie privat in deinem Browser.';
+const defaultTitle = 'EVN Finder';
 const defaultKeywords = new Set([
-	'marudor',
-	'Bahn',
-	'Experte',
-	'Zugabfahrten',
-	'Abfahrtstafel',
-	'BahnhofsAbfahrten',
-	'Zugabfahrtszeiten',
-	'Verspätung',
+	'EVN',
+	'Europäische Fahrzeugnummer',
 	'Wagenreihung',
-	'ICE',
-	'Fernverkehr',
-	'Regionalverkehr',
+	'Fahrzeugnummer',
+	'UIC',
+	'Bahn',
 ]);
 
 function useHeaderTagInner() {

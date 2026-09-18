@@ -1,11 +1,7 @@
 import { HeaderTags } from '@/client/Common/Components/HeaderTags';
-import { Navigation } from '@/client/Common/Components/Navigation';
 import { ThemeHeaderTags } from '@/client/Common/Components/ThemeHeaderTags';
-import { CommonConfigProvider } from '@/client/Common/provider/CommonConfigProvider';
 import { HeaderTagProvider } from '@/client/Common/provider/HeaderTagProvider';
 import { GlobalCSS } from '@/client/GlobalCSS';
-import { PolitikPopup } from '@/client/PolitikPopup';
-import { RoutingProvider } from '@/client/Routing/provider/RoutingProvider';
 import type { TRPCQueryUtilsType } from '@/router';
 import { NoSsr } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -40,10 +36,11 @@ const customDeLocaleText: typeof deDE.components.MuiLocalizationProvider.default
 		clearButtonLabel: 'Jetzt',
 	};
 
+// Keine Analytics, kein Tracking-Skript, kein Consent-Banner. Nur die
+// Theme-Einstellung wird (lokal, ohne Server-Kontakt) aus localStorage gelesen.
 const scripts: AnyRouteMatch['scripts'] = [
 	{
 		children: `
-			window.DISRUPTION=${JSON.stringify(globalThis.DISRUPTION)};
 			var themeMode = localStorage.getItem('mui-mode');
 			if (!themeMode || themeMode === 'system') {
 				themeMode = 'dark';
@@ -66,8 +63,6 @@ window.$RefreshSig$ = () => (type) => type`,
 	});
 }
 
-let plausibleScript: (typeof scripts)[number] | undefined;
-
 export const Route = createRootRouteWithContext<{
 	baseUrl: string;
 	trpcUtils: TRPCQueryUtilsType;
@@ -76,19 +71,6 @@ export const Route = createRootRouteWithContext<{
 		noHeader: z.boolean().optional(),
 	}),
 	head: (ctx) => {
-		if (!import.meta.env.DEV) {
-			if (!plausibleScript) {
-				plausibleScript = {
-					async: true,
-					defer: true,
-					// @ts-expect-error custom
-					'data-api': `https://${ctx.match.context.baseUrl}/api/event`,
-					'data-domain': ctx.match.context.baseUrl,
-					src: `https://${ctx.match.context.baseUrl}/js/script.js`,
-				};
-				scripts.push(plausibleScript);
-			}
-		}
 		const image = `https://${ctx.match.context.baseUrl}/android-chrome-384x384.png`;
 		return {
 			meta: [
@@ -150,17 +132,6 @@ export const Route = createRootRouteWithContext<{
 	component: RootComponent,
 });
 
-const chaosSocialAnchor = (
-	// biome-ignore lint/a11y/useAnchorContent: <explanation>
-	<a
-		rel="me"
-		style={{
-			display: 'none',
-		}}
-		href="https://chaos.social/@marudor"
-	/>
-);
-
 const testAwareOutlet = process.env.TEST_RUN ? (
 	<NoSsr>
 		<Outlet />
@@ -176,7 +147,6 @@ function RootComponent() {
 				<Meta />
 			</head>
 			<body>
-				{chaosSocialAnchor}
 				<LocalizationProvider
 					dateAdapter={AdapterDateFns}
 					adapterLocale={deLocale}
@@ -185,15 +155,8 @@ function RootComponent() {
 					<GlobalCSS />
 					<HeaderTagProvider>
 						<ThemeHeaderTags />
-						<CommonConfigProvider>
-							<Navigation>
-								<RoutingProvider>
-									<PolitikPopup />
-									{testAwareOutlet}
-									<HeaderTags />
-								</RoutingProvider>
-							</Navigation>
-						</CommonConfigProvider>
+						{testAwareOutlet}
+						<HeaderTags />
 					</HeaderTagProvider>
 				</LocalizationProvider>
 				{!globalThis.Cypress && (

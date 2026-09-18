@@ -1,4 +1,3 @@
-import { ClientStorage, ServerStorage } from '@/client/Common/Storage';
 import { DefaultCatchBoundary } from '@/client/DefaultCatchBoundary';
 import { theme } from '@/client/Themes';
 import { parse, stringify } from '@/devalue';
@@ -20,7 +19,6 @@ import {
 } from '@trpc/client';
 import { createTRPCQueryUtils, createTRPCReact } from '@trpc/react-query';
 import qs from 'qs';
-import { CookiesProvider } from 'react-cookie';
 import { routeTree } from './routeTree.gen';
 
 export const trpc = createTRPCReact<AppRouter>();
@@ -89,15 +87,7 @@ export const RPCProvider: FCC = ({ children }) => (
 );
 
 export function createRouter(request?: Request) {
-	const storage = request
-		? new ServerStorage(request.headers.get('cookies'))
-		: new ClientStorage();
-
-	const Wrap: FCC = ({ children }) => (
-		<RPCProvider>
-			<CookiesProvider cookies={storage}>{children}</CookiesProvider>
-		</RPCProvider>
-	);
+	const Wrap: FCC = ({ children }) => <RPCProvider>{children}</RPCProvider>;
 
 	return createReactRouter({
 		context: {

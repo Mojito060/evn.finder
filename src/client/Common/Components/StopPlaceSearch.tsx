@@ -1,5 +1,4 @@
 import { useStopPlaceSearch } from '@/client/Common/hooks/useStopPlaceSearch';
-import { useCommonConfig } from '@/client/Common/provider/CommonConfigProvider';
 import type { MinimalStopPlace } from '@/types/stopPlace';
 import { MenuItem, Paper, TextField, styled } from '@mui/material';
 import Downshift from 'downshift';
@@ -50,18 +49,10 @@ export const StopPlaceSearch: FC<Props> = ({
 	groupedBySales,
 }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
-	const { showRl100 } = useCommonConfig();
 
-	const formatSuggestion = useCallback(
-		(suggestion: MinimalStopPlace) => {
-			let r = suggestion.name;
-			if (showRl100 && suggestion?.ril100) {
-				r += ` [${suggestion.ril100}]`;
-			}
-			return r;
-		},
-		[showRl100],
-	);
+	const formatSuggestion = useCallback((suggestion: MinimalStopPlace) => {
+		return suggestion.name;
+	}, []);
 
 	const {
 		suggestions,

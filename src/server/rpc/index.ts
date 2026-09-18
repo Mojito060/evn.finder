@@ -1,24 +1,19 @@
-import { bahnRpcRouter } from '@/server/rpc/bahn';
 import { rpcAppRouter } from '@/server/rpc/base';
 import { boardsRpcRouter } from '@/server/rpc/boards';
 import { coachSequenceRpcRouter } from '@/server/rpc/coachSequence';
-import { connectionsRouter } from '@/server/rpc/connections';
-import { hafasRpcRouter } from '@/server/rpc/hafas';
-import { irisRpcRouter } from '@/server/rpc/iris';
 import { journeysRpcRouter } from '@/server/rpc/journeys';
 import { stopPlaceRpcRouter } from '@/server/rpc/stopPlace';
 import { createHTTPHandler } from '@trpc/server/adapters/standalone';
 import { createOpenApiHttpHandler } from 'trpc-to-openapi';
 import { eventHandler } from 'vinxi/http';
 
+// Nur die Router, die das EVN-Finder-Feature tatsächlich braucht:
+// Wagenreihung/EVNs (coachSequence), Zugläufe (journeys), Bahnhofssuche
+// (stopPlace) und Abfahrten für die Liniensuche (boards).
 const mainRouter = rpcAppRouter({
 	coachSequence: coachSequenceRpcRouter,
 	stopPlace: stopPlaceRpcRouter,
-	iris: irisRpcRouter,
-	hafas: hafasRpcRouter,
 	journeys: journeysRpcRouter,
-	connections: connectionsRouter,
-	bahn: bahnRpcRouter,
 	boards: boardsRpcRouter,
 });
 

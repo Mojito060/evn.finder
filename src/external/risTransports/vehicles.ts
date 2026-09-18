@@ -23,7 +23,7 @@ const vehiclesClient = new VehiclesApi(
 	axiosWithTimeout,
 );
 
-async function getJourneysForVehicle(vehicleId: string) {
+export async function getJourneysForVehicle(vehicleId: string) {
 	try {
 		const journeys = (
 			await Promise.allSettled([
