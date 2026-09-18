@@ -18,7 +18,12 @@ async function getDepartures(
 			logger.warn(e, 'RIS::Boards failed, falling back to IRIS');
 		}
 	}
-	return getIrisDepartures(evaNumber, timeStart, timeEnd);
+	try {
+		return await getIrisDepartures(evaNumber, timeStart, timeEnd);
+	} catch (e) {
+		logger.error(e, 'IRIS fallback failed');
+		return { departures: [] };
+	}
 }
 
 type RawRisDeparturesProcedure = QueryProcedure<{
