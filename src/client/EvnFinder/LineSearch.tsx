@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker';
 import { endOfDay, startOfDay } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FC } from 'react';
 import { CoachList } from './CoachList';
 import { EvnSaveButton } from './EvnSaveButton';
@@ -29,6 +29,24 @@ interface RowResult {
 
 function normalizeLine(s: string) {
 	return s.toLowerCase().replace(/\s+/g, '');
+}
+
+function normalizeEvn(s: string) {
+	return s.replace(/\D/g, '');
+}
+
+function sequenceMatchesEvn(
+	data: CoachSequenceInformation | undefined,
+	targetEvnDigits: string,
+): boolean {
+	if (!data || !targetEvnDigits) return false;
+	return data.sequence.groups.some((g) =>
+		g.coaches.some((c) => {
+			if (!c.uic) return false;
+			const digits = normalizeEvn(c.uic);
+			return digits === targetEvnDigits || digits.includes(targetEvnDigits);
+		}),
+	);
 }
 
 function matchesLine(departure: StopDeparture, lines: string[]): boolean {
@@ -47,7 +65,8 @@ const DepartureRow: FC<{
 	evaNumber: string;
 	result?: RowResult;
 	onResult: (journeyID: string, result: RowResult) => void;
-}> = ({ departure, evaNumber, result, onResult }) => {
+	highlight?: boolean;
+}> = ({ departure, evaNumber, result, onResult, highlight }) => {
 	const trpcUtils = trpc.useUtils();
 
 	const load = async () => {
@@ -68,7 +87,16 @@ const DepartureRow: FC<{
 	};
 
 	return (
-		<Box sx={{ borderBottom: '1px solid', borderColor: 'divider', py: 1 }}>
+		<Box
+			sx={{
+				borderBottom: '1px solid',
+				borderColor: 'divider',
+				py: 1,
+				...(highlight
+					? { bgcolor: 'success.main', color: 'success.contrastText', px: 1 }
+					: {}),
+			}}
+		>
 			<Stack
 				direction="row"
 				justifyContent="space-between"
@@ -116,6 +144,9 @@ export const LineSearch: FC = () => {
 		timeEnd: Date;
 	}>();
 	const [results, setResults] = useState<Record<string, RowResult>>({});
+	const [targetEvn, setTargetEvn] = useState('');
+	const bulkRunId = useRef(0);
+	const trpcUtils = trpc.useUtils();
 
 	const departuresQuery = trpc.boards.rawDepartures.useQuery(
 		{
@@ -146,6 +177,71 @@ export const LineSearch: FC = () => {
 			matchesLine(d, params.lines),
 		);
 	}, [departuresQuery.data, params]);
+
+	const targetEvnDigits = normalizeEvn(targetEvn);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: trpcUtils is stable, intentionally left out
+	useEffect(() => {
+		if (!targetEvnDigits || filtered.length === 0 || !params) return;
+
+		bulkRunId.current += 1;
+		const runId = bulkRunId.current;
+		const evaNumber = params.evaNumber;
+		const queue = [...filtered];
+		const concurrency = 4;
+
+		async function worker() {
+			while (queue.length) {
+				if (runId !== bulkRunId.current) return;
+				const d = queue.shift();
+				if (!d) return;
+				setResults((old) => ({ ...old, [d.journeyID]: { loading: true } }));
+				try {
+					const data = await trpcUtils.coachSequence.sequence.fetch({
+						trainNumber: d.transport.number,
+						category: d.transport.category,
+						administration: d.administration.administrationID,
+						evaNumber,
+						departure: new Date(d.timeSchedule),
+						initialDeparture: new Date(d.timeSchedule),
+					});
+					if (runId !== bulkRunId.current) return;
+					setResults((old) => ({ ...old, [d.journeyID]: { data } }));
+				} catch {
+					if (runId !== bulkRunId.current) return;
+					setResults((old) => ({ ...old, [d.journeyID]: { error: true } }));
+				}
+			}
+		}
+
+		for (let i = 0; i < concurrency; i += 1) {
+			void worker();
+		}
+
+		return () => {
+			bulkRunId.current += 1;
+		};
+	}, [filtered, targetEvnDigits, params]);
+
+	const evnSearchProgress = useMemo(() => {
+		if (!targetEvnDigits || filtered.length === 0) return undefined;
+		const done = filtered.filter((d) => {
+			const r = results[d.journeyID];
+			return r && !r.loading;
+		}).length;
+		return { done, total: filtered.length };
+	}, [filtered, results, targetEvnDigits]);
+
+	const matchingJourneyIds = useMemo(() => {
+		if (!targetEvnDigits) return new Set<string>();
+		const ids = new Set<string>();
+		for (const [journeyID, r] of Object.entries(results)) {
+			if (sequenceMatchesEvn(r.data, targetEvnDigits)) {
+				ids.add(journeyID);
+			}
+		}
+		return ids;
+	}, [results, targetEvnDigits]);
 
 	const aggregatedEvns = useMemo(() => {
 		const set = new Set<string>();
@@ -205,6 +301,16 @@ export const LineSearch: FC = () => {
 				</Button>
 			</Stack>
 
+			<TextField
+				label="EVN in diesen Fahrten suchen (optional)"
+				placeholder="z.B. 94 80 0432 505-6"
+				value={targetEvn}
+				onChange={(e) => setTargetEvn(e.target.value)}
+				size="small"
+				sx={{ mb: 2, minWidth: 280 }}
+				helperText="Lädt automatisch die Wagenreihung aller gefundenen Fahrten dieser Linie(n) und markiert Treffer. Findet nur Fahrten auf den oben angegebenen Linien, keinen Linienwechsel."
+			/>
+
 			{departuresQuery.isFetching && <CircularProgress size={20} />}
 			{departuresQuery.isError && (
 				<Alert severity="error">Fehler beim Laden der Abfahrten.</Alert>
@@ -214,6 +320,19 @@ export const LineSearch: FC = () => {
 				<Typography variant="body2" sx={{ mb: 1 }}>
 					{filtered.length} Fahrt(en) gefunden.
 				</Typography>
+			)}
+
+			{evnSearchProgress && (
+				<Alert
+					severity={matchingJourneyIds.size > 0 ? 'success' : 'info'}
+					sx={{ mb: 2 }}
+				>
+					{evnSearchProgress.done < evnSearchProgress.total
+						? `Durchsuche Wagenreihung: ${evnSearchProgress.done}/${evnSearchProgress.total} Fahrten geprüft…`
+						: matchingJourneyIds.size > 0
+							? `Gefunden in ${matchingJourneyIds.size} Fahrt(en) - grün markiert unten.`
+							: `${evnSearchProgress.total} Fahrten geprüft, EVN nicht gefunden. Ggf. andere Linie(n) probieren (Linienwechsel im Tagesverlauf werden hier nicht erkannt).`}
+				</Alert>
 			)}
 
 			{aggregatedEvns.length > 0 && (
@@ -245,6 +364,7 @@ export const LineSearch: FC = () => {
 						evaNumber={params!.evaNumber}
 						result={results[d.journeyID]}
 						onResult={(id, r) => setResults((old) => ({ ...old, [id]: r }))}
+						highlight={matchingJourneyIds.has(d.journeyID)}
 					/>
 				))}
 			</Stack>

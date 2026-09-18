@@ -6,6 +6,7 @@ import {
 	getUmlauf,
 } from '@/external/risTransports/vehicles';
 import { coachSequence } from '@/server/coachSequence';
+import { getNewDBCoachSequence } from '@/server/coachSequence/DB/bahnDe';
 import { getPlannedSequence } from '@/server/coachSequence/DB/plannedSequence';
 import { getTrainRunsByDate } from '@/server/coachSequence/DB/trainRuns';
 import { rpcAppRouter, rpcProcedure } from '@/server/rpc/base';
@@ -51,6 +52,17 @@ export const coachSequenceRpcRouter = rpcAppRouter({
 				} catch {
 					// we ignore this
 				}
+
+				// RIS::Transports not configured/failed - fall back to the
+				// unauthenticated bahn.de vehicle-sequence endpoint.
+				const bahnDeSequence = await getNewDBCoachSequence(
+					category,
+					trainNumber.toString(),
+					evaNumber,
+					departure,
+					initialDeparture ?? departure,
+				);
+				if (bahnDeSequence) return bahnDeSequence;
 
 				if (trainNumber < 10000 && evaNumber) {
 					const plannedSequence = await getPlannedSequence(

@@ -1,8 +1,25 @@
 import type { BoardPublicDeparture } from '@/external/generated/risBoards';
 import { rawRisDepartures } from '@/external/risBoards';
+import { getIrisDepartures } from '@/server/boards/irisFallback';
+import { logger } from '@/server/logger';
 import { rpcAppRouter, rpcProcedure } from '@/server/rpc/base';
 import type { QueryProcedure } from '@trpc/server/unstable-core-do-not-import';
 import { z } from 'zod';
+
+async function getDepartures(
+	evaNumber: string,
+	timeStart: Date,
+	timeEnd: Date,
+): Promise<BoardPublicDeparture> {
+	if (process.env.RIS_BOARDS_URL) {
+		try {
+			return await rawRisDepartures(evaNumber, timeStart, timeEnd);
+		} catch (e) {
+			logger.warn(e, 'RIS::Boards failed, falling back to IRIS');
+		}
+	}
+	return getIrisDepartures(evaNumber, timeStart, timeEnd);
+}
 
 type RawRisDeparturesProcedure = QueryProcedure<{
 	input: {
@@ -30,6 +47,6 @@ export const boardsRpcRouter = rpcAppRouter({
 		)
 		.output(z.any())
 		.query(({ input: { evaNumber, timeStart, timeEnd } }) => {
-			return rawRisDepartures(evaNumber, timeStart, timeEnd);
+			return getDepartures(evaNumber, timeStart, timeEnd);
 		}) as RawRisDeparturesProcedure,
 });
