@@ -5,9 +5,11 @@ import type {
 	StopPlace,
 	StopPlaceSearchResult,
 } from '@/external/types';
+import { searchStopPlaceBahnDe } from '@/server/StopPlace/bahnDeFallback';
 import { manualNameOverrides } from '@/server/StopPlace/manualNameOverrides';
 import { CacheDatabase, getCache } from '@/server/cache';
 import { getSingleStation } from '@/server/iris/station';
+import { logger } from '@/server/logger';
 import type { GroupedStopPlace, StopPlaceIdentifier } from '@/types/stopPlace';
 
 const stopPlaceStationSearchCache = getCache(CacheDatabase.StopPlaceSearch);
@@ -157,10 +159,21 @@ async function searchStopPlaceRemote(
 	searchTerm: string,
 	groupBySales?: boolean,
 ) {
-	const [risResult, rl100Result] = await Promise.all([
-		byName(searchTerm, undefined, groupBySales),
-		byRl100WithSpaceHandling(searchTerm.toUpperCase()),
-	]);
+	if (!process.env.RIS_STATIONS_URL) {
+		return searchStopPlaceBahnDe(searchTerm);
+	}
+
+	let risResult: StopPlaceSearchResult[];
+	let rl100Result: StopPlace | undefined;
+	try {
+		[risResult, rl100Result] = await Promise.all([
+			byName(searchTerm, undefined, groupBySales),
+			byRl100WithSpaceHandling(searchTerm.toUpperCase()),
+		]);
+	} catch (e) {
+		logger.warn(e, 'RIS::Stations failed, falling back to bahn.de');
+		return searchStopPlaceBahnDe(searchTerm);
+	}
 	const groupedStopPlaces = risResult.map(mapToGroupedStopPlace);
 	if (rl100Result) {
 		groupedStopPlaces.unshift(mapToGroupedStopPlace(rl100Result));
