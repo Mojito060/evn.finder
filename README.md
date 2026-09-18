@@ -97,6 +97,12 @@ alle anderen Features (Zugsuche, Liniensuche, EVN-Fahrt-Historie) werden
 eigene RIS-Zugangsdaten benötigt (siehe oben) – die Original-App wurde
 mit intern verteilten, nicht-öffentlichen Zugangsdaten betrieben.
 
+## Branching & Deployment
+
+Entwicklung läuft über Feature-Branches → `develop` → `main`. Ein Merge
+nach `main` deployed automatisch per Docker/GHCR auf den Server. Details:
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) und [`DEPLOYMENT.md`](./DEPLOYMENT.md).
+
 ## Cross browser testing
 
 Big thanks to [BrowserStack](https://browserstack.com)  

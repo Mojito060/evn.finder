@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+env:
+  CI: 'true'
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install
+        run: |
+          corepack enable
+          pnpm i --frozen-lockfile
+        env:
+          CYPRESS_INSTALL_BINARY: 0
+          COREPACK_INTEGRITY_KEYS: 0
+      - name: unit test
+        run: pnpm test:unit
+      - name: lint
+        run: pnpm lint
+      - name: types
+        run: pnpm test:ts:main
