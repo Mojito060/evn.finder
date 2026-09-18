@@ -5,8 +5,8 @@ import type {
 	StopPlace,
 	StopPlaceSearchResult,
 } from '@/external/types';
-import { searchStopPlaceBahnDe } from '@/server/StopPlace/bahnDeFallback';
 import { manualNameOverrides } from '@/server/StopPlace/manualNameOverrides';
+import { searchStopPlaceStatic } from '@/server/StopPlace/staticStations';
 import { CacheDatabase, getCache } from '@/server/cache';
 import { getSingleStation } from '@/server/iris/station';
 import { logger } from '@/server/logger';
@@ -160,7 +160,7 @@ async function searchStopPlaceRemote(
 	groupBySales?: boolean,
 ) {
 	if (!process.env.RIS_STATIONS_URL) {
-		return searchStopPlaceBahnDe(searchTerm);
+		return searchStopPlaceStatic(searchTerm);
 	}
 
 	let risResult: StopPlaceSearchResult[];
@@ -171,8 +171,8 @@ async function searchStopPlaceRemote(
 			byRl100WithSpaceHandling(searchTerm.toUpperCase()),
 		]);
 	} catch (e) {
-		logger.warn(e, 'RIS::Stations failed, falling back to bahn.de');
-		return searchStopPlaceBahnDe(searchTerm);
+		logger.warn(e, 'RIS::Stations failed, falling back to static station list');
+		return searchStopPlaceStatic(searchTerm);
 	}
 	const groupedStopPlaces = risResult.map(mapToGroupedStopPlace);
 	if (rl100Result) {
