@@ -15,6 +15,9 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    # App uses Redis logical DBs 0-27 (src/server/cache.ts CacheDatabase enum),
+    # default redis.conf only allows 16.
+    command: redis-server --databases 32
     volumes:
       - redis-data:/data
 
