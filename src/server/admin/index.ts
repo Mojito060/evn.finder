@@ -63,7 +63,7 @@ function upstreamErrorResponseApiCountInterceptor(apiName: string, error: any) {
 	if (isAxiosError(error) && error.status) {
 		UpstreamApiResponseMetric?.inc({ api: apiName, code: error.status });
 	}
-	return error;
+	throw error;
 }
 
 export function axiosUpstreamInterceptor(
