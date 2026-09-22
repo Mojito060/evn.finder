@@ -6,10 +6,16 @@ import type { AxiosInstance } from 'axios';
 import { isValid, parse } from 'date-fns';
 import type { Element } from 'libxmljs2';
 
+// iris.noncd.db.de is behind an Imperva/Incapsula WAF that rejects
+// requests with an empty User-Agent ("Request Rejected" HTML page instead
+// of the expected XML), so a realistic browser UA is required here.
+const IRIS_USER_AGENT =
+	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
+
 const noncdRequest = Axios.create({
 	baseURL: process.env.IRIS_URL || 'http://iris.dummy',
 	headers: {
-		'user-agent': '',
+		'user-agent': IRIS_USER_AGENT,
 	},
 	timeout: 4000,
 });
@@ -19,7 +25,7 @@ if (process.env.IRIS_FALLBACK_URL) {
 	fallbackRequest = Axios.create({
 		baseURL: process.env.IRIS_FALLBACK_URL,
 		headers: {
-			'user-agent': '',
+			'user-agent': IRIS_USER_AGENT,
 		},
 		timeout: 8000,
 	});
